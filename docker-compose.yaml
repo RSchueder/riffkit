@@ -16,8 +16,11 @@ services:
       - .:/workspace
     depends_on:
       - livekit
-    command: sleep infinity
     environment:
       - LIVEKIT_URL=${LIVEKIT_URL}
       - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
       - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
+      - MATRIX_HOMESERVER=${MATRIX_HOMESERVER}
+      - MATRIX_USER_ID=${MATRIX_USER_ID}
+      - MATRIX_PASSWORD=${MATRIX_PASSWORD}
+    command: ["python", "bot.py"]

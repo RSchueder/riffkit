@@ -1,0 +1,17 @@
+{
+    "name": "riffkit-bot",
+    "dockerComposeFile": [
+      "../docker-compose.yaml"
+    ],
+    "service": "bot",
+    "workspaceFolder": "/workspace",
+    "customizations": {
+      "vscode": {
+        "extensions": [
+          "ms-python.python",
+          "ms-python.black-formatter",
+          "ms-python.isort"
+        ]
+      }
+    }
+  }

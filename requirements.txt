@@ -1,0 +1,7 @@
+black
+isort
+livekit
+livekit-api
+matrix-nio[e2e]
+python-dotenv
+yt-dlp

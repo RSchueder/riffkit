@@ -4,16 +4,11 @@ An element music bot
 # Testing
 
 ```
-docker compose up -d bot
+docker compose up -d
 
 ```
-then inside container
 
-```
-python stream.py
-```
-
-then outside container
+then
 
 ```
 lk room join  \
@@ -28,3 +23,7 @@ then inside container
 ```
 python generate_room_url.py
 ```
+
+Then go to this URL. Then in a room with your bot invited, type 
+
+`!play <URL>` and the audio should stream.

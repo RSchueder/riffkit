@@ -102,6 +102,8 @@ async def main():
     print(f"Logged into Matrix as {MATRIX_USER_ID}")
 
     async def on_message(room: MatrixRoom, event: RoomMessageText):
+        global current_stream
+
         if event.sender == MATRIX_USER_ID:
             return
         if event.body.startswith("!play "):
@@ -113,7 +115,22 @@ async def main():
                 content={"msgtype": "m.text", "body": f"🎵 Loading: {url}"},
             )
             asyncio.create_task(stream_audio(source, url, room.room_id, matrix))
-
+        elif event.body.strip() == "!stop":
+            if current_stream:
+                current_stream.kill()
+                current_stream = None
+                await matrix.room_send(
+                    room.room_id,
+                    message_type="m.room.message",
+                    content={"msgtype": "m.text", "body": "⏹️ Stopped."},
+                )
+            else:
+                await matrix.room_send(
+                    room.room_id,
+                    message_type="m.room.message",
+                    content={"msgtype": "m.text", "body": "Nothing is playing."},
+                )
+                
     matrix.add_event_callback(on_message, RoomMessageText)
 
     print("Listening for !play commands...")

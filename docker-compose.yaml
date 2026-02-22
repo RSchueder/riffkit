@@ -1,26 +1,19 @@
 services:
-  livekit:
-    image: livekit/livekit-server:latest
-    ports:
-      - "7880:7880"
-      - "7881:7881"
-      - "7882:7882/udp"
-    volumes:
-      - ./livekit.yaml:/livekit.yaml
-    command: ["--config", "/livekit.yaml", "--node-ip", "127.0.0.1"]
 
   bot:
     build:
       context: .
     volumes:
       - .:/workspace
-    depends_on:
-      - livekit
     environment:
-      - LIVEKIT_URL=${LIVEKIT_URL}
-      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
-      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
       - MATRIX_HOMESERVER=${MATRIX_HOMESERVER}
       - MATRIX_USER_ID=${MATRIX_USER_ID}
       - MATRIX_PASSWORD=${MATRIX_PASSWORD}
-    command: ["python", "bot.py"]
+    # command: ["python", "bot.py"]
+    command: sleep infinity  # keep container alive, run scripts manually
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

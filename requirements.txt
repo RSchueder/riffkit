@@ -1,4 +1,5 @@
 black
+httpx
 isort
 livekit
 livekit-api

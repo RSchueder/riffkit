@@ -4,9 +4,14 @@ import time
 
 import httpx
 from livekit import rtc
-from nio import AsyncClient, MatrixRoom, RoomMessageText
+from nio import AsyncClient, MatrixRoom, RoomMessageText  # type: ignore
 
-from environment import MATRIX_HOMESERVER, MATRIX_PASSWORD, MATRIX_USER_ID
+from environment import (
+    MATRIX_HOMESERVER,
+    MATRIX_PASSWORD,
+    MATRIX_ROOM_ID,
+    MATRIX_USER_ID,
+)
 
 SAMPLE_RATE = 48000
 NUM_CHANNELS = 1
@@ -91,6 +96,7 @@ async def stream_audio(
 
         loop = asyncio.get_event_loop()
         while True:
+            assert proc.stdout is not None and proc.stderr is not None
             data = await loop.run_in_executor(None, proc.stdout.read, BYTES_PER_FRAME)
             if not data or proc != current_stream:
                 stderr_output = await loop.run_in_executor(None, proc.stderr.read)
@@ -136,9 +142,7 @@ async def main():
     print(f"Logged into Matrix as {MATRIX_USER_ID}")
 
     try:
-        lk_url, lk_jwt = await get_livekit_credentials(
-            matrix, "!MuZpVyeQhshKFklekb:matrix.org"
-        )
+        lk_url, lk_jwt = await get_livekit_credentials(matrix, MATRIX_ROOM_ID)
         print(f"Connecting to LiveKit at {lk_url}...")
 
         lk_room = rtc.Room()
@@ -146,7 +150,7 @@ async def main():
         print(f"Connected to LiveKit room: {lk_room.name}")
 
         await matrix.room_put_state(
-            room_id="!MuZpVyeQhshKFklekb:matrix.org",
+            room_id=MATRIX_ROOM_ID,
             event_type="org.matrix.msc3401.call.member",
             state_key=f"_{MATRIX_USER_ID}_{device_id}_m.call",
             content={
@@ -156,7 +160,7 @@ async def main():
                 "expires": 3600000,
                 "foci_preferred": [
                     {
-                        "livekit_alias": "!MuZpVyeQhshKFklekb:matrix.org",
+                        "livekit_alias": MATRIX_ROOM_ID,
                         "livekit_service_url": "https://livekit-jwt.call.matrix.org",
                         "type": "livekit",
                     }
@@ -222,7 +226,7 @@ async def main():
 
     finally:
         await matrix.room_put_state(
-            room_id="!MuZpVyeQhshKFklekb:matrix.org",
+            room_id=MATRIX_ROOM_ID,
             event_type="org.matrix.msc3401.call.member",
             state_key=f"_{MATRIX_USER_ID}_{device_id}_m.call",
             content={},

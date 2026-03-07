@@ -9,11 +9,15 @@ services:
       - MATRIX_HOMESERVER=${MATRIX_HOMESERVER}
       - MATRIX_USER_ID=${MATRIX_USER_ID}
       - MATRIX_PASSWORD=${MATRIX_PASSWORD}
-    # command: ["python", "bot.py"]
-    command: sleep infinity  # keep container alive, run scripts manually
+      - MATRIX_ROOM_ID=${MATRIX_ROOM_ID}
+    command: ["python", "bot.py"]
 
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
+
+  dev:
+    extends: bot
+    command: sleep infinity 

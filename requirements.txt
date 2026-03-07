@@ -4,5 +4,6 @@ isort
 livekit
 livekit-api
 matrix-nio[e2e]
+mypy
 python-dotenv
 yt-dlp

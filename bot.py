@@ -1,5 +1,9 @@
 import asyncio
+import glob
+import os
+import shutil
 import subprocess
+import tempfile
 import time
 
 import httpx
@@ -11,6 +15,8 @@ from environment import (
     MATRIX_PASSWORD,
     MATRIX_ROOM_ID,
     MATRIX_USER_ID,
+    SPOTIFY_CLIENT_ID,
+    SPOTIFY_CLIENT_SECRET,
 )
 
 SAMPLE_RATE = 48000
@@ -54,6 +60,7 @@ async def stream_audio(
     global current_stream, current_ydl_proc
     proc = None
     ydl_proc = None
+    tmpdir = None
 
     if current_stream:
         current_stream.kill()
@@ -64,37 +71,70 @@ async def stream_audio(
 
     try:
         print(f"Starting stream for {url}...")
+        loop = asyncio.get_event_loop()
 
-        # pipe yt-dlp directly into ffmpeg to avoid expiring URLs
-        ydl_proc = subprocess.Popen(
-            ["yt-dlp", "-f", "bestaudio", "-o", "-", "--quiet", url],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
-        )
-        current_ydl_proc = ydl_proc
+        if "open.spotify.com" in url:
+            # spotdl downloads to a temp file, then we feed it to ffmpeg
+            tmpdir = tempfile.mkdtemp(prefix="riffkit_")
 
-        proc = subprocess.Popen(
-            [
-                "ffmpeg",
-                "-i",
-                "pipe:0",
-                "-f",
-                "s16le",
-                "-ar",
-                str(SAMPLE_RATE),
-                "-ac",
-                str(NUM_CHANNELS),
-                "-loglevel",
-                "error",
-                "-",
-            ],
-            stdin=ydl_proc.stdout,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
+            spotdl_proc = await asyncio.create_subprocess_exec(
+                "spotdl", "download", url,
+                "--client-id", SPOTIFY_CLIENT_ID,
+                "--client-secret", SPOTIFY_CLIENT_SECRET,
+                "--output", os.path.join(tmpdir, "{title}.{output-ext}"),
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            spotdl_stdout, spotdl_stderr = await asyncio.wait_for(spotdl_proc.communicate(), timeout=120)
+            print(f"spotdl stdout: {spotdl_stdout.decode()}")
+            print(f"spotdl stderr: {spotdl_stderr.decode()}")
+            print(f"spotdl returncode: {spotdl_proc.returncode}")
+            print(f"tmpdir contents: {os.listdir(tmpdir)}")
+            if spotdl_proc.returncode != 0:
+                raise Exception(f"spotdl failed: {spotdl_stderr.decode()}")
+
+            files = glob.glob(os.path.join(tmpdir, "*"))
+            if not files:
+                raise Exception("spotdl produced no output file")
+
+            proc = subprocess.Popen(
+                [
+                    "ffmpeg", "-i", files[0],
+                    "-f", "s16le",
+                    "-ar", str(SAMPLE_RATE),
+                    "-ac", str(NUM_CHANNELS),
+                    "-loglevel", "error",
+                    "-",
+                ],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+        else:
+            # pipe yt-dlp directly into ffmpeg to avoid expiring URLs
+            ydl_proc = subprocess.Popen(
+                ["yt-dlp", "-f", "bestaudio", "-o", "-", "--quiet", url],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+            )
+            current_ydl_proc = ydl_proc
+
+            proc = subprocess.Popen(
+                [
+                    "ffmpeg",
+                    "-i", "pipe:0",
+                    "-f", "s16le",
+                    "-ar", str(SAMPLE_RATE),
+                    "-ac", str(NUM_CHANNELS),
+                    "-loglevel", "error",
+                    "-",
+                ],
+                stdin=ydl_proc.stdout,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+
         current_stream = proc
 
-        loop = asyncio.get_event_loop()
         while True:
             assert proc.stdout is not None and proc.stderr is not None
             data = await loop.run_in_executor(None, proc.stdout.read, BYTES_PER_FRAME)
@@ -132,6 +172,8 @@ async def stream_audio(
         if ydl_proc and current_ydl_proc == ydl_proc:
             ydl_proc.kill()
             current_ydl_proc = None
+        if tmpdir:
+            shutil.rmtree(tmpdir, ignore_errors=True)
 
 
 async def main():

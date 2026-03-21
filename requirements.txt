@@ -6,4 +6,5 @@ livekit-api
 matrix-nio[e2e]
 mypy
 python-dotenv
+spotdl
 yt-dlp

@@ -7,5 +7,6 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /workspace
 
 COPY requirements.txt .
+COPY constraints.txt .
 RUN pip install -r requirements.txt -c constraints.txt
 COPY . .

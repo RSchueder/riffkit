@@ -8,7 +8,7 @@ This is very much so a work in progress and is not ready for general use.
 
 ```
 docker compose build
-docker compose up -d bot
+docker compose up bot
 ```
 
 # TO-DO

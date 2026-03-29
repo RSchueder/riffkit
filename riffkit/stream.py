@@ -8,11 +8,32 @@ import tempfile
 from livekit import rtc
 from nio import AsyncClient  # type: ignore
 
+import httpx
+
+from riffkit.auth import get_spotify_token
 from riffkit.constants import BYTES_PER_FRAME, NUM_CHANNELS, SAMPLE_RATE
-from riffkit.environment import SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET
+from riffkit.environment import (
+    SPOTIFY_CLIENT_ID,
+    SPOTIFY_CLIENT_SECRET,
+    SPOTIFY_USE_YOUTUBE,
+)
 
 current_ydl_proc: subprocess.Popen | None = None
 current_stream: subprocess.Popen | None = None
+
+
+async def spotify_url_to_youtube_search(url: str, token: str) -> str:
+    """Resolve a Spotify track URL to a yt-dlp ytsearch query."""
+    track_id = url.split("/track/")[1].split("?")[0]
+    async with httpx.AsyncClient() as http:
+        resp = await http.get(
+            f"https://api.spotify.com/v1/tracks/{track_id}",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        data = resp.json()
+    artist = data["artists"][0]["name"]
+    title = data["name"]
+    return f"ytsearch1:{artist} - {title}"
 
 
 def is_playing() -> bool:
@@ -43,6 +64,11 @@ async def stream_audio(
     if current_ydl_proc:
         current_ydl_proc.kill()
         current_ydl_proc = None
+
+    if SPOTIFY_USE_YOUTUBE and "open.spotify.com/track/" in url:
+        token = await get_spotify_token()
+        url = await spotify_url_to_youtube_search(url, token)
+        print(f"Resolved Spotify track to: {url}")
 
     try:
         print(f"Starting stream for {url}...")

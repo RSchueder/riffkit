@@ -2,6 +2,7 @@ import asyncio
 import glob
 import os
 import shutil
+import signal
 import subprocess
 import tempfile
 import time
@@ -189,7 +190,7 @@ async def main():
 
         lk_room = rtc.Room()
         await lk_room.connect(lk_url, lk_jwt)
-        print(f"Connected to LiveKit room: {lk_room.name}")
+        print(f"Connected to LiveKit room: {lk_room._info}")
 
         await matrix.room_put_state(
             room_id=MATRIX_ROOM_ID,
@@ -199,7 +200,7 @@ async def main():
                 "application": "m.call",
                 "call_id": "",
                 "device_id": device_id,
-                "expires": 3600000,
+                "expires": int(time.time() * 1000) + 8 * 3600000,  # 8 hours from now
                 "foci_preferred": [
                     {
                         "livekit_alias": MATRIX_ROOM_ID,
@@ -278,4 +279,5 @@ async def main():
 
 
 if __name__ == "__main__":
+    signal.signal(signal.SIGTERM, lambda *_: (_ for _ in ()).throw(KeyboardInterrupt()))
     asyncio.run(main())

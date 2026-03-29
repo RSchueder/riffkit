@@ -12,7 +12,7 @@ services:
       - MATRIX_ROOM_ID=${MATRIX_ROOM_ID}
       - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID}
       - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
-    command: python -u bot.py
+    command: python -u main.py
 
     logging:
       driver: "json-file"
